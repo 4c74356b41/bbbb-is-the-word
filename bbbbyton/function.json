@@ -1,0 +1,12 @@
+{
+  "bindings": [
+    {
+      "name": "input",
+      "type": "queueTrigger",
+      "direction": "in",
+      "queueName": "bbbb",
+      "connection": "function_conn_string"
+    }
+  ],
+  "disabled": false
+}
