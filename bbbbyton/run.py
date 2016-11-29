@@ -17,12 +17,16 @@ CREATE TABLE {}
 """.format(table_name, table_key)
 
 input = open(os.environ['input']).read()
-try:
- cnxn = pyodbc.connect('DRIVER={SQL Server};SERVER=%s;PORT=1433;DATABASE=%s;UID=%s;PWD=%s' % (os.getenv('SQL_ADR'), os.getenv('SQL_DTB'), os.getenv('SQL_USR'), os.getenv('SQL_PWD')))
- cursor = cnxn.cursor()
-except:
- print('sleeping')
- time.sleep(60)
+
+i = 0
+while i < 15:
+ i = i + 1
+ try:
+  cnxn = pyodbc.connect('DRIVER={SQL Server};SERVER=%s;PORT=1433;DATABASE=%s;UID=%s;PWD=%s' % (os.getenv('SQL_ADR'), os.getenv('SQL_DTB'), os.getenv('SQL_USR'), os.getenv('SQL_PWD')))
+  cursor = cnxn.cursor()
+ except:
+  print('sleeping')
+  time.sleep(20)
 
 if cursor.tables(table=table_name).fetchone():
  cursor.execute(table_query, input)
