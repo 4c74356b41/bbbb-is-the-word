@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="jumbotron">
+    <h1>bbbb-is-the-word</h1>
+    <p class="lead">Azure High Availability PAAS and ARM templates Talk.</p>
+    <p><a href="https://github.com/4c74356b41/bbbb-is-the-word/" class="btn btn-primary btn-large">Talk's Github Page &raquo;</a></p>
+
+    <br><br>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}		
+                <p class=flashes>{{ message }}</p>		
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    {% if nodata %}
+    <p class=flaskes>{{ nodata }}</p>
+    {% endif %}
+    
+    {% if location %}
+    <p class=flaskes>{{ location }}</p>
+    {% endif %}
+
+    {% if data %}
+        <p> SQL Data: </p>
+        {% for row in data %}	
+            <p class=flashes>{{ row }}</p>		
+        {% endfor %}
+    {% endif %}
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <h2>BIRD KB Page</h2>
+        <p><a class="btn btn-default" href="https://kb.epam.com/pages/viewpage.action?pageId=316136488">Learn more &raquo;</a></p>
+    </div>
+    <div class="col-md-4">
+        <h2>BIRD Skype Chat</h2>
+        <p><a class="btn btn-default" href="http://epa.ms/BiRDSkype">Learn more &raquo;</a></p>
+    </div>
+    <div class="col-md-4">
+        <h2> BIRD Video Channel</h2>
+        <p><a class="btn btn-default" href="https://epa.ms/birdvc">Learn more &raquo;</a></p>
+    </div>
+</div>
+
+{% endblock %}

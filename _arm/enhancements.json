@@ -1,0 +1,130 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "administratorLogin": { "type": "string" },
+        "administratorLoginPassword": { "type": "securestring"},
+        "databaseName": { "type": "string" },
+        "serverName": { "type": "string" },
+        "storageAccountName": { "type": "string" },
+        "repoURL": {
+            "defaultValue": "https://github.com/4c74356b41/bbbb-is-the-word.git",
+            "type": "string"
+        },
+        "branch": {
+            "defaultValue": "functions",
+            "type": "string"
+        },
+        "hostingPlanName": {
+            "type": "string"
+        },
+        "siteName-Primary": { "type": "string" },
+        "siteName-Secondary": { "type": "string" },
+        "siteName": { "type": "string" },
+        "trafficManagerName": { "type": "string" }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Web/sites",
+            "kind": "functionapp",
+            "name": "[parameters('siteName')]",
+            "apiVersion": "2015-08-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "name": "[parameters('siteName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]",
+                    "siteConfig": {
+                        "alwaysOn": true,
+                        "appSettings": [
+                            {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~1"
+                            },
+                            {
+                            "name": "function_conn_string",
+                            "value": "[Concat('DefaultEndpointsProtocol=https;AccountName=',parameters('StorageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value)]"
+                            },
+                            {
+                            "name": "SQL_ADR",
+                            "value": "[Concat(parameters('serverName'),'.database.windows.net')]"
+                            },
+                            {
+                            "name": "SQL_DTB",
+                            "value": "[parameters('databaseName')]"
+                            },
+                            {
+                            "name": "SQL_USR",
+                            "value": "[parameters('administratorLogin')]"
+                            },
+                            {
+                            "name": "SQL_PWD",
+                            "value": "[parameters('administratorLoginPassword')]"
+                            }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                "apiVersion": "2015-08-01",
+                "name": "web",
+                "type": "sourcecontrols",
+                "dependsOn": [
+                    "[resourceId('Microsoft.Web/Sites', parameters('siteName'))]"
+                ],
+                "properties": {
+                    "RepoUrl": "[parameters('repoURL')]",
+                    "branch": "[parameters('branch')]",
+                    "IsManualIntegration": true
+                }
+                }
+            ],
+            "dependsOn": [
+            ]
+        },
+        {
+            "type": "Microsoft.Network/trafficManagerProfiles",
+            "name": "[parameters('trafficManagerName')]",
+            "apiVersion": "2015-11-01",
+            "location": "global",
+            "properties": {
+                "profileStatus": "Enabled",
+                "trafficRoutingMethod": "Weighted",
+                "dnsConfig": {
+                    "relativeName": "[parameters('trafficManagerName')]",
+                    "fqdn": "[concat(parameters('trafficManagerName'),'.trafficmanager.net')]",
+                    "ttl": 30
+                },
+                "monitorConfig": {
+                    "protocol": "HTTP",
+                    "port": 80,
+                    "path": "/"
+                },
+                "endpoints": [
+                    {
+                        "name": "bbbb-pr1mary",
+                        "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+                        "properties": {
+                            "endpointStatus": "Enabled",
+                            "targetResourceId": "[resourceId('Microsoft.Web/Sites', parameters('siteName-Primary'))]",
+                            "weight": 1,
+                            "priority": 1
+                        }
+                    },
+                    {
+                        "name": "bbbb-secondary",
+                        "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+                        "properties": {
+                            "endpointStatus": "Enabled",
+                            "targetResourceId": "[resourceId('Microsoft.Web/Sites', parameters('siteName-Secondary'))]",
+                            "weight": 1,
+                            "priority": 2
+                        }
+                    }
+                ]
+            },
+            "resources": [],
+            "dependsOn": []
+        }
+    ]
+}
