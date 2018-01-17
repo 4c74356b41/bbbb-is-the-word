@@ -1,569 +1,601 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "trafficManagerName": { "type": "string" },
-        "sku": {  "type": "string",
-                  "allowedValues": [ "F1", "D1", "B1", "B2", "B3", "S1", "S2", "S3", "P1", "P2", "P3", "P4" ]
-               },
-    "repoURL": {  "type": "string",
-                  "defaultValue": "https://github.com/4c74356b41/bbbb-is-the-word.git"
-    },
-    "branch": {   "type": "string",
-                  "defaultValue": "master"
-    },
-    "administratorLogin": { "type": "string" },
-    "secretName": { "type": "string" },
-    "collation": {  "type":  "string",
-                    "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
-    },
-    "databaseName": { "type": "string" },
-    "edition": {  "type": "string",
-                  "defaultValue": "basic"
-    },
-    "requestedServiceObjectiveName": {  "type": "string",
-                                        "defaultValue": "basic"
-    },
-    "location": { "type": "string", 
-                  "defaultValue": "westeurope" },
-    "replicalocation": {  "type": "string",
-                          "defaultValue": "eastus2"},
-    "version": {    "type": "string",
-                    "defaultValue": "12.0"
-    },
-    "storageAccountType": {
-      "type": "string",
-      "defaultValue": "Standard_LRS",
-      "allowedValues": [
-          "Standard_LRS",
-          "Standard_GRS",
-          "Standard_ZRS"
-      ],
-      "metadata": {
-          "description": "Storage Account type"
-      }
-    }
-  },
-  "variables": {
-    "storageAccountName": "[uniqueString(resourceGroup().id)]",
-    "primaryWebApp": "[uniqueString(resourceGroup().id, '1')]",
-    "secondaryWebApp": "[uniqueString(resourceGroup().id, '2')]",
-    "functionWebApp": "[uniqueString(resourceGroup().id, '3')]",
-    "primaryHostingPlan": "[uniqueString(resourceGroup().id, '4')]",
-    "secondaryHostingPlan": "[uniqueString(resourceGroup().id, '5')]",
-    "serverName": "[uniqueString(resourceGroup().id, '6')]",
-    "serverReplicaName": "[uniqueString(resourceGroup().id, '7')]"
-  },
-  "resources": [
-    {
-      "apiVersion": "2015-01-01",
-      "name": "StorageAccount",
-      "type": "Microsoft.Resources/deployments",
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/storage.json",
-          "contentVersion": "1.0.0.0"
-        },
-      "parameters": { 
-        "storageAccountName": {
-          "value": "[variables('storageAccountName')]"
-          },
-        "storageAccountType": {
-          "value": "[parameters('storageAccountType')]"
-          },
-        "location": {
-          "value": "[parameters('location')]"
-          }
-        } 
-      }
-    },
-    {
-      "apiVersion": "2015-01-01",
-      "name": "webAppPrimary",
-      "type": "Microsoft.Resources/deployments",
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'StorageAccount')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/webapp-git.json",
-          "contentVersion": "1.0.0.0"
-        },
-      "parameters": { 
-        "siteName": {
-          "value": "[variables('primaryWebApp')]"
-          },
-        "hostingPlanName": {
-          "value": "[variables('primaryHostingPlan')]"
-          },
-        "sku": {
-          "value": "[parameters('sku')]"
-          },
-        "repoUrl": {
-          "value": "[parameters('repoUrl')]"
-          },
-        "branch": {
-          "value": "[parameters('branch')]"
-          },
-        "location": {
-          "value": "[parameters('location')]"
-          },
-        "StorageAccountName": {
-          "value": "[variables('storageAccountName')]"
-        },
-        "administratorLogin": {
-            "value": "[parameters('administratorLogin')]"
-         },
-        "administratorLoginPassword": {
-            "reference": {
-              "keyVault": {
-                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/dckr/providers/Microsoft.KeyVault/vaults/vau1ty"
-              },
-              "secretName": "[parameters('secretName')]"
-            }
-         },
-        "databaseName": {
-            "value": "[parameters('databaseName')]"
-         },
-        "serverName": {
-            "value":  "[variables('serverName')]"
-         },
-        "LOCATIONENV": {
-            "value": "Primary"
-         }
-        } 
-      }
-    },
-    {
-      "apiVersion": "2015-01-01",
-      "name": "webAppSecondary",
-      "type": "Microsoft.Resources/deployments",
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'StorageAccount')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/webapp-git.json",
-          "contentVersion": "1.0.0.0"
-        },
-      "parameters": { 
-        "siteName": {
-          "value": "[variables('secondaryWebApp')]"
-          },
-        "hostingPlanName": {
-          "value": "[variables('secondaryHostingPlan')]"
-          },
-        "sku": {
-          "value": "[parameters('sku')]"
-          },
-        "repoUrl": {
-          "value": "[parameters('repoUrl')]"
-          },
-        "branch": {
-          "value": "[parameters('branch')]"
-          },
-        "location": {
-          "value": "[parameters('replicalocation')]"
-         },
-        "StorageAccountName": {
-          "value": "[variables('storageAccountName')]"
-          },
-        "administratorLogin": {
-            "value": "[parameters('administratorLogin')]"
-         },
-        "administratorLoginPassword": {
-            "reference": {
-              "keyVault": {
-                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/dckr/providers/Microsoft.KeyVault/vaults/vau1ty"
-              },
-              "secretName": "[parameters('secretName')]"
-            }
-         },
-        "databaseName": {
-            "value": "[parameters('databaseName')]"
-         },
-        "serverName": {
-            "value": "[variables('serverReplicaName')]"
-         },
-        "LOCATIONENV": {
-            "value": "Secondary"
-         }
-        } 
-      }
-    },
-    {
-      "apiVersion": "2015-01-01",
-      "name": "enhancements",
-      "type": "Microsoft.Resources/deployments",
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'webAppPrimary')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/enhancements.json",
-          "contentVersion": "1.0.0.0"
-        },
-      "parameters": { 
-        "siteName": {
-          "value": "[variables('functionWebApp')]"
-          },
-        "siteName-Primary": {
-          "value": "[variables('primaryWebApp')]"
-        },
-        "siteName-Secondary": {
-          "value": "[variables('secondaryWebApp')]"
-        },
-        "hostingPlanName": {
-          "value": "[variables('primaryHostingPlan')]"
-          },
-        "StorageAccountName": {
-          "value": "[variables('storageAccountName')]"
-          },
-        "administratorLogin": {
-            "value": "[parameters('administratorLogin')]"
-         },
-        "administratorLoginPassword": {
-            "reference": {
-              "keyVault": {
-                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/dckr/providers/Microsoft.KeyVault/vaults/vau1ty"
-              },
-              "secretName": "[parameters('secretName')]"
-            }
-         },
-        "databaseName": {
-            "value": "[parameters('databaseName')]"
-         },
-        "serverName": {
-            "value": "[variables('serverName')]"
-         },
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
         "trafficManagerName": {
-            "value": "[parameters('trafficManagerName')]"
-         }
-        } 
-      }
-    },
-    {
-      "apiVersion": "2015-01-01",
-      "name": "sqlDatabaseGeoReplicated",
-      "type": "Microsoft.Resources/deployments",
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/sql-replica.json",
-          "contentVersion": "1.0.0.0"
+            "type": "string"
         },
-      "parameters": {
+        "sku": {
+            "type": "string",
+            "allowedValues": [
+                "F1",
+                "D1",
+                "B1",
+                "B2",
+                "B3",
+                "S1",
+                "S2",
+                "S3",
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+            ]
+        },
+        "repoURL": {
+            "type": "string",
+            "defaultValue": "https://github.com/4c74356b41/bbbb-is-the-word.git"
+        },
+        "branch": {
+            "type": "string",
+            "defaultValue": "master"
+        },
         "administratorLogin": {
-            "value": "[parameters('administratorLogin')]"
-         },
-        "administratorLoginPassword": {
-            "reference": {
-              "keyVault": {
-                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/dckr/providers/Microsoft.KeyVault/vaults/vau1ty"
-              },
-              "secretName": "[parameters('secretName')]"
-            }
-         },
-        "collation": {
-            "value": "[parameters('collation')]"
-         },
-        "databaseName": {
-            "value": "[parameters('databaseName')]"
-         },
-        "edition": {
-            "value": "[parameters('edition')]"
-         },
-        "requestedServiceObjectiveName": {
-            "value": "[parameters('requestedServiceObjectiveName')]"
-         },
-        "location": {
-            "value": "[parameters('location')]"
-         },
-        "replicalocation": {
-            "value": "[parameters('replicalocation')]"
-         },
-        "serverName": {
-            "value": "[variables('serverName')]"
-         },
-        "serverReplicaName": {
-            "value": "[variables('serverReplicaName')]"
-          },
-        "version": {
-            "value": "[parameters('version')]"
-          }
-        } 
-      }
-    },
-    {
-        "properties": {
-            "lenses": {
-            "0": {
-                "order": 0,
-                "parts": {
-                "0": {
-                    "position": {
-                    "x": 0,
-                    "y": 0,
-                    "rowSpan": 4,
-                    "colSpan": 6
-                    },
-                    "metadata": {
-                    "inputs": [
-                        {
-                        "name": "id",
-                        "value": "[resourceId('Microsoft.Web/sites', variables('primaryWebApp'))]"
-                        },
-                        {
-                        "name": "_msPortalFxTimeRange",
-                        "binding": "timeRange",
-                        "isOptional": true
-                        }
-                    ],
-                    "type": "Extension/WebsitesExtension/PartType/RequestsAndErrorsAdaptedPart",
-                    "settings": {
-                        "content": {
-                        "metricQuerySetting": {
-                            "title": "Requests and errors",
-                            "timespan": {
-                            "duration": "PT1H",
-                            "start": null,
-                            "end": null
-                            },
-                            "metrics": [
-                            {
-                                "resourceId": "[resourceId('Microsoft.Web/sites', variables('primaryWebApp'))]",
-                                "name": "Requests",
-                                "timeGrain": "PT1M",
-                                "displayName": ""
-                            },
-                            {
-                                "resourceId": "[resourceId('Microsoft.Web/sites', variables('primaryWebApp'))]",
-                                "name": "Http5xx",
-                                "timeGrain": "PT1M",
-                                "displayName": ""
-                            }
-                            ]
-                        }
-                        }
-                    },
-                    "isAdapter": true,
-                    "asset": {
-                        "idInputName": "id",
-                        "type": "Website"
-                    }
-                    }
-                },
-                "1": {
-                    "position": {
-                    "x": 6,
-                    "y": 0,
-                    "rowSpan": 4,
-                    "colSpan": 4
-                    },
-                    "metadata": {
-                    "inputs": [
-                        {
-                        "name": "id",
-                        "value": "[resourceId('Microsoft.Web/sites', variables('primaryWebApp'))]"
-                        },
-                        {
-                        "name": "_msPortalFxTimeRange",
-                        "binding": "timeRange",
-                        "isOptional": true
-                        }
-                    ],
-                    "type": "Extension/WebsitesExtension/PartType/CpuPercentageAdaptedPart",
-                    "settings": {},
-                    "isAdapter": true,
-                    "asset": {
-                        "idInputName": "id",
-                        "type": "Website"
-                    }
-                    }
-                },
-                "2": {
-                    "position": {
-                    "x": 0,
-                    "y": 4,
-                    "rowSpan": 4,
-                    "colSpan": 6
-                    },
-                    "metadata": {
-                    "inputs": [
-                        {
-                        "name": "id",
-                        "value": "[resourceId('Microsoft.Web/sites', variables('secondaryWebApp'))]"
-                        },
-                        {
-                        "name": "_msPortalFxTimeRange",
-                        "binding": "timeRange",
-                        "isOptional": true
-                        }
-                    ],
-                    "type": "Extension/WebsitesExtension/PartType/RequestsAndErrorsAdaptedPart",
-                    "settings": {
-                        "content": {
-                        "metricQuerySetting": {
-                            "title": "Requests and errors",
-                            "timespan": {
-                            "duration": "PT1H",
-                            "start": null,
-                            "end": null
-                            },
-                            "metrics": [
-                            {
-                                "resourceId": "[resourceId('Microsoft.Web/sites', variables('secondaryWebApp'))]",
-                                "name": "Requests",
-                                "timeGrain": "PT1M",
-                                "displayName": ""
-                            },
-                            {
-                                "resourceId": "[resourceId('Microsoft.Web/sites', variables('secondaryWebApp'))]",
-                                "name": "Http5xx",
-                                "timeGrain": "PT1M",
-                                "displayName": ""
-                            }
-                            ]
-                        }
-                        }
-                    },
-                    "isAdapter": true,
-                    "asset": {
-                        "idInputName": "id",
-                        "type": "Website"
-                    }
-                    }
-                },
-                "3": {
-                    "position": {
-                    "x": 6,
-                    "y": 4,
-                    "rowSpan": 4,
-                    "colSpan": 4
-                    },
-                    "metadata": {
-                    "inputs": [
-                        {
-                        "name": "id",
-                        "value": "[resourceId('Microsoft.Web/sites', variables('secondaryWebApp'))]"
-                        },
-                        {
-                        "name": "_msPortalFxTimeRange",
-                        "binding": "timeRange",
-                        "isOptional": true
-                        }
-                    ],
-                    "type": "Extension/WebsitesExtension/PartType/CpuPercentageAdaptedPart",
-                    "settings": {},
-                    "isAdapter": true,
-                    "asset": {
-                        "idInputName": "id",
-                        "type": "Website"
-                    }
-                    }
-                },
-                "4": {
-                    "position": {
-                    "x": 10,
-                    "y": 0,
-                    "rowSpan": 4,
-                    "colSpan": 6
-                    },
-                    "metadata": {
-                    "inputs": [
-                        {
-                        "name": "id",
-                        "value": "[resourceId('Microsoft.SQL/servers/databases', variables('serverName'), parameters('databaseName'))]"
-                        },
-                        {
-                        "name": "_msPortalFxTimeRange",
-                        "binding": "timeRange",
-                        "isOptional": true
-                        }
-                    ],
-                    "type": "Extension/SqlAzureExtension/PartType/resourceUtilizationAdapterPart",
-                    "settings": {},
-                    "isAdapter": true,
-                    "asset": {
-                        "idInputName": "id",
-                        "type": "Database"
-                    }
-                    }
-                },
-                "5": {
-                    "position": {
-                    "x": 10,
-                    "y": 4,
-                    "rowSpan": 4,
-                    "colSpan": 6
-                    },
-                    "metadata": {
-                    "inputs": [
-                        {
-                        "name": "id",
-                        "value": "[resourceId('Microsoft.SQL/servers/databases', variables('serverReplicaName'), parameters('databaseName'))]"
-                        },
-                        {
-                        "name": "_msPortalFxTimeRange",
-                        "binding": "timeRange",
-                        "isOptional": true
-                        }
-                    ],
-                    "type": "Extension/SqlAzureExtension/PartType/resourceUtilizationAdapterPart",
-                    "settings": {},
-                    "isAdapter": true,
-                    "asset": {
-                        "idInputName": "id",
-                        "type": "Database"
-                    }
-                    }
-                }
-                }
-            }
-            },
-            "metadata": {
-            "model": {
-                "timeRange": {
-                "value": {
-                    "relative": {
-                    "duration": 24,
-                    "timeUnit": 1
-                    }
-                },
-                "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
-                }
-            }
-          }
+            "type": "string"
         },
-      "name": "0933fee7-0ef9-4713-a641-08dfe4600237",
-      "type": "Microsoft.Portal/dashboards",
-      "location": "[parameters('location')]",
-      "apiVersion": "2015-08-01-preview",
-      "tags": {
-          "hidden-title": "[parameters('trafficManagerName')]"
-      }
-    }    
-  ],
-  "outputs": {
-    "webAppPrimary": {
-      "type": "string",
-      "value": "[variables('primaryWebApp')]"
+        "secretName": {
+            "type": "string"
+        },
+        "collation": {
+            "type": "string",
+            "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        "databaseName": {
+            "type": "string"
+        },
+        "edition": {
+            "type": "string",
+            "defaultValue": "basic"
+        },
+        "requestedServiceObjectiveName": {
+            "type": "string",
+            "defaultValue": "basic"
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "westeurope"
+        },
+        "replicalocation": {
+            "type": "string",
+            "defaultValue": "eastus2"
+        },
+        "version": {
+            "type": "string",
+            "defaultValue": "12.0"
+        },
+        "storageAccountType": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_ZRS"
+            ],
+            "metadata": {
+                "description": "Storage Account type"
+            }
+        }
     },
-    "webAppSecondary": {
-      "type": "string",
-      "value": "[variables('secondaryWebApp')]"
+    "variables": {
+        "storageAccountName": "[uniqueString(resourceGroup().id)]",
+        "primaryWebApp": "[uniqueString(resourceGroup().id, '1')]",
+        "secondaryWebApp": "[uniqueString(resourceGroup().id, '2')]",
+        "functionWebApp": "[uniqueString(resourceGroup().id, '3')]",
+        "primaryHostingPlan": "[uniqueString(resourceGroup().id, '4')]",
+        "secondaryHostingPlan": "[uniqueString(resourceGroup().id, '5')]",
+        "serverName": "[uniqueString(resourceGroup().id, '6')]",
+        "serverReplicaName": "[uniqueString(resourceGroup().id, '7')]"
     },
-    "webAppFunctions": {
-      "type": "string",
-      "value": "[variables('functionWebApp')]"
-    },
-    "sqlServerPrimary": {
-      "type": "string",
-      "value": "[variables('serverName')]"
+    "resources": [
+        {
+            "apiVersion": "2015-01-01",
+            "name": "StorageAccount",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/storage.json",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "storageAccountName": {
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "storageAccountType": {
+                        "value": "[parameters('storageAccountType')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-01-01",
+            "name": "webAppPrimary",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'StorageAccount')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/webapp-git.json",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "siteName": {
+                        "value": "[variables('primaryWebApp')]"
+                    },
+                    "hostingPlanName": {
+                        "value": "[variables('primaryHostingPlan')]"
+                    },
+                    "sku": {
+                        "value": "[parameters('sku')]"
+                    },
+                    "repoUrl": {
+                        "value": "[parameters('repoUrl')]"
+                    },
+                    "branch": {
+                        "value": "[parameters('branch')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "StorageAccountName": {
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "administratorLogin": {
+                        "value": "[parameters('administratorLogin')]"
+                    },
+                    "administratorLoginPassword": {
+                        "reference": {
+                            "keyVault": {
+                                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/dckr/providers/Microsoft.KeyVault/vaults/vau1ty"
+                            },
+                            "secretName": "[parameters('secretName')]"
+                        }
+                    },
+                    "databaseName": {
+                        "value": "[parameters('databaseName')]"
+                    },
+                    "serverName": {
+                        "value": "[variables('serverName')]"
+                    },
+                    "LOCATIONENV": {
+                        "value": "Primary"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-01-01",
+            "name": "webAppSecondary",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'StorageAccount')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/webapp-git.json",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "siteName": {
+                        "value": "[variables('secondaryWebApp')]"
+                    },
+                    "hostingPlanName": {
+                        "value": "[variables('secondaryHostingPlan')]"
+                    },
+                    "sku": {
+                        "value": "[parameters('sku')]"
+                    },
+                    "repoUrl": {
+                        "value": "[parameters('repoUrl')]"
+                    },
+                    "branch": {
+                        "value": "[parameters('branch')]"
+                    },
+                    "location": {
+                        "value": "[parameters('replicalocation')]"
+                    },
+                    "StorageAccountName": {
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "administratorLogin": {
+                        "value": "[parameters('administratorLogin')]"
+                    },
+                    "administratorLoginPassword": {
+                        "reference": {
+                            "keyVault": {
+                                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/dckr/providers/Microsoft.KeyVault/vaults/vau1ty"
+                            },
+                            "secretName": "[parameters('secretName')]"
+                        }
+                    },
+                    "databaseName": {
+                        "value": "[parameters('databaseName')]"
+                    },
+                    "serverName": {
+                        "value": "[variables('serverReplicaName')]"
+                    },
+                    "LOCATIONENV": {
+                        "value": "Secondary"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-01-01",
+            "name": "enhancements",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'webAppPrimary')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/enhancements.json",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "siteName": {
+                        "value": "[variables('functionWebApp')]"
+                    },
+                    "siteName-Primary": {
+                        "value": "[variables('primaryWebApp')]"
+                    },
+                    "siteName-Secondary": {
+                        "value": "[variables('secondaryWebApp')]"
+                    },
+                    "hostingPlanName": {
+                        "value": "[variables('primaryHostingPlan')]"
+                    },
+                    "StorageAccountName": {
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "administratorLogin": {
+                        "value": "[parameters('administratorLogin')]"
+                    },
+                    "administratorLoginPassword": {
+                        "reference": {
+                            "keyVault": {
+                                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/dckr/providers/Microsoft.KeyVault/vaults/vau1ty"
+                            },
+                            "secretName": "[parameters('secretName')]"
+                        }
+                    },
+                    "databaseName": {
+                        "value": "[parameters('databaseName')]"
+                    },
+                    "serverName": {
+                        "value": "[variables('serverName')]"
+                    },
+                    "trafficManagerName": {
+                        "value": "[parameters('trafficManagerName')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-01-01",
+            "name": "sqlDatabaseGeoReplicated",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/bbbb-is-the-word/master/_arm/sql-replica.json",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "administratorLogin": {
+                        "value": "[parameters('administratorLogin')]"
+                    },
+                    "administratorLoginPassword": {
+                        "reference": {
+                            "keyVault": {
+                                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/dckr/providers/Microsoft.KeyVault/vaults/vau1ty"
+                            },
+                            "secretName": "[parameters('secretName')]"
+                        }
+                    },
+                    "collation": {
+                        "value": "[parameters('collation')]"
+                    },
+                    "databaseName": {
+                        "value": "[parameters('databaseName')]"
+                    },
+                    "edition": {
+                        "value": "[parameters('edition')]"
+                    },
+                    "requestedServiceObjectiveName": {
+                        "value": "[parameters('requestedServiceObjectiveName')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "replicalocation": {
+                        "value": "[parameters('replicalocation')]"
+                    },
+                    "serverName": {
+                        "value": "[variables('serverName')]"
+                    },
+                    "serverReplicaName": {
+                        "value": "[variables('serverReplicaName')]"
+                    },
+                    "version": {
+                        "value": "[parameters('version')]"
+                    }
+                }
+            }
+        },
+        {
+            "properties": {
+                "lenses": {
+                    "0": {
+                        "order": 0,
+                        "parts": {
+                            "0": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 0,
+                                    "rowSpan": 4,
+                                    "colSpan": 6
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "[resourceId('Microsoft.Web/sites', variables('primaryWebApp'))]"
+                                        },
+                                        {
+                                            "name": "_msPortalFxTimeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/WebsitesExtension/PartType/RequestsAndErrorsAdaptedPart",
+                                    "settings": {
+                                        "content": {
+                                            "metricQuerySetting": {
+                                                "title": "Requests and errors",
+                                                "timespan": {
+                                                    "duration": "PT1H",
+                                                    "start": null,
+                                                    "end": null
+                                                },
+                                                "metrics": [
+                                                    {
+                                                        "resourceId": "[resourceId('Microsoft.Web/sites', variables('primaryWebApp'))]",
+                                                        "name": "Requests",
+                                                        "timeGrain": "PT1M",
+                                                        "displayName": ""
+                                                    },
+                                                    {
+                                                        "resourceId": "[resourceId('Microsoft.Web/sites', variables('primaryWebApp'))]",
+                                                        "name": "Http5xx",
+                                                        "timeGrain": "PT1M",
+                                                        "displayName": ""
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "isAdapter": true,
+                                    "asset": {
+                                        "idInputName": "id",
+                                        "type": "Website"
+                                    }
+                                }
+                            },
+                            "1": {
+                                "position": {
+                                    "x": 6,
+                                    "y": 0,
+                                    "rowSpan": 4,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "[resourceId('Microsoft.Web/sites', variables('primaryWebApp'))]"
+                                        },
+                                        {
+                                            "name": "_msPortalFxTimeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/WebsitesExtension/PartType/CpuPercentageAdaptedPart",
+                                    "settings": {},
+                                    "isAdapter": true,
+                                    "asset": {
+                                        "idInputName": "id",
+                                        "type": "Website"
+                                    }
+                                }
+                            },
+                            "2": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 4,
+                                    "rowSpan": 4,
+                                    "colSpan": 6
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "[resourceId('Microsoft.Web/sites', variables('secondaryWebApp'))]"
+                                        },
+                                        {
+                                            "name": "_msPortalFxTimeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/WebsitesExtension/PartType/RequestsAndErrorsAdaptedPart",
+                                    "settings": {
+                                        "content": {
+                                            "metricQuerySetting": {
+                                                "title": "Requests and errors",
+                                                "timespan": {
+                                                    "duration": "PT1H",
+                                                    "start": null,
+                                                    "end": null
+                                                },
+                                                "metrics": [
+                                                    {
+                                                        "resourceId": "[resourceId('Microsoft.Web/sites', variables('secondaryWebApp'))]",
+                                                        "name": "Requests",
+                                                        "timeGrain": "PT1M",
+                                                        "displayName": ""
+                                                    },
+                                                    {
+                                                        "resourceId": "[resourceId('Microsoft.Web/sites', variables('secondaryWebApp'))]",
+                                                        "name": "Http5xx",
+                                                        "timeGrain": "PT1M",
+                                                        "displayName": ""
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "isAdapter": true,
+                                    "asset": {
+                                        "idInputName": "id",
+                                        "type": "Website"
+                                    }
+                                }
+                            },
+                            "3": {
+                                "position": {
+                                    "x": 6,
+                                    "y": 4,
+                                    "rowSpan": 4,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "[resourceId('Microsoft.Web/sites', variables('secondaryWebApp'))]"
+                                        },
+                                        {
+                                            "name": "_msPortalFxTimeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/WebsitesExtension/PartType/CpuPercentageAdaptedPart",
+                                    "settings": {},
+                                    "isAdapter": true,
+                                    "asset": {
+                                        "idInputName": "id",
+                                        "type": "Website"
+                                    }
+                                }
+                            },
+                            "4": {
+                                "position": {
+                                    "x": 10,
+                                    "y": 0,
+                                    "rowSpan": 4,
+                                    "colSpan": 6
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "[resourceId('Microsoft.SQL/servers/databases', variables('serverName'), parameters('databaseName'))]"
+                                        },
+                                        {
+                                            "name": "_msPortalFxTimeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/SqlAzureExtension/PartType/resourceUtilizationAdapterPart",
+                                    "settings": {},
+                                    "isAdapter": true,
+                                    "asset": {
+                                        "idInputName": "id",
+                                        "type": "Database"
+                                    }
+                                }
+                            },
+                            "5": {
+                                "position": {
+                                    "x": 10,
+                                    "y": 4,
+                                    "rowSpan": 4,
+                                    "colSpan": 6
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "[resourceId('Microsoft.SQL/servers/databases', variables('serverReplicaName'), parameters('databaseName'))]"
+                                        },
+                                        {
+                                            "name": "_msPortalFxTimeRange",
+                                            "binding": "timeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/SqlAzureExtension/PartType/resourceUtilizationAdapterPart",
+                                    "settings": {},
+                                    "isAdapter": true,
+                                    "asset": {
+                                        "idInputName": "id",
+                                        "type": "Database"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "metadata": {
+                    "model": {
+                        "timeRange": {
+                            "value": {
+                                "relative": {
+                                    "duration": 24,
+                                    "timeUnit": 1
+                                }
+                            },
+                            "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
+                        }
+                    }
+                }
+            },
+            "name": "0933fee7-0ef9-4713-a641-08dfe4600237",
+            "type": "Microsoft.Portal/dashboards",
+            "location": "[parameters('location')]",
+            "apiVersion": "2015-08-01-preview",
+            "tags": {
+                "hidden-title": "[parameters('trafficManagerName')]"
+            }
+        }
+    ],
+    "outputs": {
+        "webAppPrimary": {
+            "type": "string",
+            "value": "[variables('primaryWebApp')]"
+        },
+        "webAppSecondary": {
+            "type": "string",
+            "value": "[variables('secondaryWebApp')]"
+        },
+        "webAppFunctions": {
+            "type": "string",
+            "value": "[variables('functionWebApp')]"
+        },
+        "sqlServerPrimary": {
+            "type": "string",
+            "value": "[variables('serverName')]"
+        }
     }
-  }
 }
